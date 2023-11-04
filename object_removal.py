@@ -15,6 +15,7 @@ import cv2
 
 width = 0
 height = 0
+base_image = np.array([])
 
 def np_im_to_data(im):
     array = np.array(im, dtype=np.uint8)
@@ -61,14 +62,47 @@ def display_image(np_image):
     window = sg.Window('Object Removal', layout, finalize=True, size=(1000, 600))    
     window['-IMAGE-'].draw_image(data=image_data, location=(0, height))
 
+    # Use list over a NumPy array because appending is faster
+    # Can contain the same coordinates more than once!
+    markup_locations = []
+
     # Event loop
     while True:
-        event, _ = window.read()
+        event, values = window.read()
 
-        if event == sg.WINDOW_CLOSED:
+        if event == "-IMAGE-":
+            x, y = values[event]
+            add_markup_locations(x, y, existing_locations=markup_locations)
+        elif event == "-IMAGE-+UP":
+            markup_image(markup_locations, window)
+        elif event == sg.WINDOW_CLOSED:
             break
 
     window.close()
+
+def add_markup_locations(x, y, existing_locations):
+    # update y because (0, 0) is bottom left of the image
+    y = height - y
+
+    delta = np.meshgrid([-2, -1, 0, 1, 2])
+
+    dx, dy = np.meshgrid(delta, delta)
+    cx, cy = np.full(dx.shape, x), np.full(dy.shape, y)
+
+    surrounding_x = cx + dx
+    surrounding_y = cy + dy
+
+    surrounding_coordinates = np.stack((surrounding_x, surrounding_y), axis=-1)
+    surrounding_coordinates_list = surrounding_coordinates.reshape(-1, 2).tolist()
+
+    existing_locations.extend(surrounding_coordinates_list)
+
+def markup_image(markup_locations, window):
+    markups = np.array(markup_locations)
+    base_image[markups[:, 1], markups[:, 0]] = 255
+    image_data = np_im_to_data(base_image)
+    window['-IMAGE-'].erase()
+    window['-IMAGE-'].draw_image(data=image_data, location=(0, height))
 
 def main():
     parser = argparse.ArgumentParser(description='A simple object remover.')
@@ -83,8 +117,9 @@ def main():
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     print(f'{image.shape}')
 
-    global height, width
-    height, width = image.shape[0], image.shape[1]
+    global base_image, height, width
+    base_image = image
+    height, width = base_image.shape[0], base_image.shape[1]
 
     display_image(image)
 
