@@ -26,6 +26,24 @@ def np_im_to_data(im):
         data = output.getvalue()
     return data
 
+def remove_objects(image, marked_locations, radius=1):
+    # Make a copy of orignial image
+    result_image = [row[:] for row in image]
+
+    for x, y in marked_locations:
+        # Get the pixel values at the marked location
+        pixel_value = image[y][x]
+
+        for i in range(max(0, x - radius), min(len(image[0]), x + radius + 1)):
+            for j in range(max(0, y - radius), min(len(image), y + radius + 1)):
+                # Compare individual RGB components of the pixel values
+                for c in range(3): # 0 = Red, 1 = Green, 2 = Blue
+                    # If any RGB component of the pixel differs, replace the marked pixel
+                    if image[j][i][c] != pixel_value[c]:
+                        result_image[y][x] = image[j][i]
+                        break  # Break if a non-marked pixel is found
+    return result_image
+
 def display_image(np_image):
     # Convert numpy array to data that sg.Graph can understand
     image_data = np_im_to_data(np_image)
@@ -84,15 +102,7 @@ def display_image(np_image):
         elif event == "Remove Objects":
             # TODO: Update obj_removed_image 
             # Use markup locations to remove objects in the image
-            # Create a mask based on the marked locations
-            mask = np.zeros((height, width), dtype=np.uint8)
-            for x, y in markup_locations:
-                # Set marked locations in the mask to white
-                mask[y, x] = 255
-
-            # Use the mask to remove the marked objects from the image
-            # Inpainting removes marked objects based on the generated mask
-            obj_removed_image = cv2.inpaint(obj_removed_image, mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
+            obj_removed_image = remove_objects(base_image, markup_locations)
 
             display_obj_removed_image(obj_removed_image)
         elif event == sg.WINDOW_CLOSED:
