@@ -16,6 +16,7 @@ import cv2
 width = 0
 height = 0
 base_image = np.array([])
+markedup_image = np.array([])
 
 def np_im_to_data(im):
     array = np.array(im, dtype=np.uint8)
@@ -99,8 +100,8 @@ def add_markup_locations(x, y, existing_locations):
 
 def markup_image(markup_locations, window):
     markups = np.array(markup_locations)
-    base_image[markups[:, 1], markups[:, 0]] = 255
-    image_data = np_im_to_data(base_image)
+    markedup_image[markups[:, 1], markups[:, 0]] = 255
+    image_data = np_im_to_data(markedup_image)
     window['-IMAGE-'].erase()
     window['-IMAGE-'].draw_image(data=image_data, location=(0, height))
 
@@ -117,8 +118,9 @@ def main():
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     print(f'{image.shape}')
 
-    global base_image, height, width
+    global base_image, markedup_image, height, width
     base_image = image
+    markedup_image = base_image
     height, width = base_image.shape[0], base_image.shape[1]
 
     display_image(image)
