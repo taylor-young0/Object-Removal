@@ -15,8 +15,8 @@ import cv2
 
 width = 0
 height = 0
+# Input image, never modified
 base_image = np.array([])
-markedup_image = np.array([])
 
 def np_im_to_data(im):
     array = np.array(im, dtype=np.uint8)
@@ -66,6 +66,11 @@ def display_image(np_image):
     # Use list over a NumPy array because appending is faster
     # Can contain the same coordinates more than once!
     markup_locations = []
+    
+    # Base image + white pixel markup
+    markedup_image = np.copy(base_image)
+    # Base image + objects removed
+    obj_removed_image = np.copy(base_image)
 
     # Event loop
     while True:
@@ -75,7 +80,11 @@ def display_image(np_image):
             x, y = values[event]
             add_markup_locations(x, y, existing_locations=markup_locations)
         elif event == "-IMAGE-+UP":
-            markup_image(markup_locations, window)
+            markup_image(markedup_image, markup_locations, window)
+        elif event == "Remove Objects":
+            # TODO: Update obj_removed_image 
+            # Use markup locations to remove objects in the image
+            display_obj_removed_image(obj_removed_image)
         elif event == sg.WINDOW_CLOSED:
             break
 
@@ -98,12 +107,58 @@ def add_markup_locations(x, y, existing_locations):
 
     existing_locations.extend(surrounding_coordinates_list)
 
-def markup_image(markup_locations, window):
+def markup_image(np_image, markup_locations, window):
     markups = np.array(markup_locations)
-    markedup_image[markups[:, 1], markups[:, 0]] = 255
-    image_data = np_im_to_data(markedup_image)
+    np_image[markups[:, 1], markups[:, 0]] = 255
+    image_data = np_im_to_data(np_image)
     window['-IMAGE-'].erase()
     window['-IMAGE-'].draw_image(data=image_data, location=(0, height))
+
+def display_obj_removed_image(np_image):
+    # Convert numpy array to data that sg.Graph can understand
+    image_data = np_im_to_data(np_image)
+
+    # Define the layout
+    graph_image_column = [
+        [
+            sg.Graph(
+                canvas_size=(width, height),
+                graph_bottom_left=(0, 0),
+                graph_top_right=(width, height),
+                key='-IMAGE-',
+                background_color='white',
+                change_submits=True,
+                drag_submits=True
+            ),
+        ]
+    ]
+
+    scrollable_graph_image_column = [
+        [
+            sg.Column(graph_image_column, scrollable=True, size=(900, 500))
+        ]
+    ]
+
+    layout = [
+        scrollable_graph_image_column,
+        [
+            sg.Button("Close"),
+            sg.Button("Save")
+        ]
+    ]
+
+    # Create the window
+    window = sg.Window('Object Removal - Result', layout, finalize=True, size=(1000, 600))    
+    window['-IMAGE-'].draw_image(data=image_data, location=(0, height))
+
+    # Event loop
+    while True:
+        event, _ = window.read()
+
+        if event == sg.WINDOW_CLOSED or "Close":
+            break
+
+    window.close()
 
 def main():
     parser = argparse.ArgumentParser(description='A simple object remover.')
@@ -118,9 +173,8 @@ def main():
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     print(f'{image.shape}')
 
-    global base_image, markedup_image, height, width
+    global base_image, height, width
     base_image = image
-    markedup_image = base_image
     height, width = base_image.shape[0], base_image.shape[1]
 
     display_image(image)
