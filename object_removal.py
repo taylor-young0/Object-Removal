@@ -84,6 +84,16 @@ def display_image(np_image):
         elif event == "Remove Objects":
             # TODO: Update obj_removed_image 
             # Use markup locations to remove objects in the image
+            # Create a mask based on the marked locations
+            mask = np.zeros((height, width), dtype=np.uint8)
+            for x, y in markup_locations:
+                # Set marked locations in the mask to white
+                mask[y, x] = 255
+
+            # Use the mask to remove the marked objects from the image
+            # Inpainting removes marked objects based on the generated mask
+            obj_removed_image = cv2.inpaint(obj_removed_image, mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
+
             display_obj_removed_image(obj_removed_image)
         elif event == sg.WINDOW_CLOSED:
             break
