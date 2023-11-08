@@ -119,8 +119,8 @@ def add_markup_locations(x, y, existing_locations):
     dx, dy = np.meshgrid(delta, delta)
     cx, cy = np.full(dx.shape, x), np.full(dy.shape, y)
 
-    surrounding_x = cx + dx
-    surrounding_y = cy + dy
+    surrounding_x = np.clip(cx + dx, 0, width - 1)
+    surrounding_y = np.clip(cy + dy, 0, height - 1) 
 
     surrounding_coordinates = np.stack((surrounding_x, surrounding_y), axis=-1)
     surrounding_coordinates_list = surrounding_coordinates.reshape(-1, 2).tolist()
