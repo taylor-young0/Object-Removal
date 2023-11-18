@@ -81,9 +81,8 @@ def display_image(np_image):
     window = sg.Window('Object Removal', layout, finalize=True, size=(1000, 600))    
     window['-IMAGE-'].draw_image(data=image_data, location=(0, height))
 
-    # Use list over a NumPy array because appending is faster
-    # Can contain the same coordinates more than once!
-    markup_locations = []
+    # Stores markup locations, 1 if that pixel is marked up, 0 otherwise
+    markup_locations = np.zeros_like(base_image)
     
     # Base image + white pixel markup
     markedup_image = np.copy(base_image)
@@ -100,9 +99,10 @@ def display_image(np_image):
         elif event == "-IMAGE-+UP":
             markup_image(markedup_image, markup_locations, window)
         elif event == "Remove Objects":
-            # TODO: Update obj_removed_image 
             # Use markup locations to remove objects in the image
-            obj_removed_image = remove_objects(base_image, markup_locations)
+            markup_ys, markup_xs, _ = np.where(markup_locations == 1)
+            markup_indexes = list(zip(markup_xs, markup_ys))
+            obj_removed_image = remove_objects(base_image, markup_indexes)
 
             display_obj_removed_image(obj_removed_image)
         elif event == sg.WINDOW_CLOSED:
@@ -111,25 +111,19 @@ def display_image(np_image):
     window.close()
 
 def add_markup_locations(x, y, existing_locations):
-    # update y because (0, 0) is bottom left of the image
+    # Update y because (0, 0) is bottom left of the image
     y = height - y
 
-    delta = np.meshgrid([-2, -1, 0, 1, 2])
-
+    delta = np.array([-2, -1, 0, 1, 2])
     dx, dy = np.meshgrid(delta, delta)
-    cx, cy = np.full(dx.shape, x), np.full(dy.shape, y)
 
-    surrounding_x = np.clip(cx + dx, 0, width - 1)
-    surrounding_y = np.clip(cy + dy, 0, height - 1) 
+    surrounding_x = np.clip(x + dx, 0, width - 1)
+    surrounding_y = np.clip(y + dy, 0, height - 1)
 
-    surrounding_coordinates = np.stack((surrounding_x, surrounding_y), axis=-1)
-    surrounding_coordinates_list = surrounding_coordinates.reshape(-1, 2).tolist()
-
-    existing_locations.extend(surrounding_coordinates_list)
+    existing_locations[surrounding_y, surrounding_x] = 1
 
 def markup_image(np_image, markup_locations, window):
-    markups = np.array(markup_locations)
-    np_image[markups[:, 1], markups[:, 0]] = 255
+    np_image[markup_locations == 1] = 255
     image_data = np_im_to_data(np_image)
     window['-IMAGE-'].erase()
     window['-IMAGE-'].draw_image(data=image_data, location=(0, height))
