@@ -73,7 +73,10 @@ def display_image(np_image):
         scrollable_graph_image_column,
         [
             sg.Button("Reset"),
-            sg.Button("Remove Objects")
+            sg.Button("Remove Objects"),
+            sg.Text(size=(85, 0)),
+            sg.Text("Markup width (px)"),
+            sg.Slider((1, 21), resolution=2, default_value=5, orientation='horizontal', key="markup_width")
         ]
     ]
 
@@ -95,7 +98,8 @@ def display_image(np_image):
 
         if event == "-IMAGE-":
             x, y = values[event]
-            add_markup_locations(x, y, existing_locations=markup_locations)
+            markup_width = values["markup_width"]
+            add_markup_locations(x, y, markup_width, existing_locations=markup_locations)
         elif event == "-IMAGE-+UP":
             markup_image(markedup_image, markup_locations, window)
         elif event == "Reset":
@@ -114,11 +118,12 @@ def display_image(np_image):
 
     window.close()
 
-def add_markup_locations(x, y, existing_locations):
+def add_markup_locations(x, y, markup_width, existing_locations):
     # Update y because (0, 0) is bottom left of the image
     y = height - y
 
-    delta = np.array([-2, -1, 0, 1, 2])
+    # width number of elements centred around 0
+    delta = np.arange(-(markup_width-1)//2, (markup_width-1)//2 + 1, dtype=np.int64)
     dx, dy = np.meshgrid(delta, delta)
 
     surrounding_x = np.clip(x + dx, 0, width - 1)
