@@ -98,6 +98,10 @@ def display_image(np_image):
             add_markup_locations(x, y, existing_locations=markup_locations)
         elif event == "-IMAGE-+UP":
             markup_image(markedup_image, markup_locations, window)
+        elif event == "Reset":
+            markup_locations = np.zeros_like(base_image)
+            markedup_image = np.copy(base_image)
+            reset_markup_image(markedup_image, window)
         elif event == "Remove Objects":
             # Use markup locations to remove objects in the image
             markup_ys, markup_xs, _ = np.where(markup_locations == 1)
@@ -125,6 +129,11 @@ def add_markup_locations(x, y, existing_locations):
 def markup_image(np_image, markup_locations, window):
     np_image[markup_locations == 1] = 255
     image_data = np_im_to_data(np_image)
+    window['-IMAGE-'].erase()
+    window['-IMAGE-'].draw_image(data=image_data, location=(0, height))
+
+def reset_markup_image(markedup_image, window):
+    image_data = np_im_to_data(markedup_image)
     window['-IMAGE-'].erase()
     window['-IMAGE-'].draw_image(data=image_data, location=(0, height))
 
