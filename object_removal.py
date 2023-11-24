@@ -10,6 +10,7 @@ import argparse
 import PySimpleGUI as sg
 from PIL import Image
 from io import BytesIO
+from scipy import ndimage
 import numpy as np
 import cv2
 
@@ -73,6 +74,7 @@ def display_image(np_image):
         scrollable_graph_image_column,
         [
             sg.Button("Reset"),
+            sg.Button("Fill Enclosures"),
             sg.Button("Remove Objects"),
             sg.Text(size=(85, 0)),
             sg.Text("Markup width (px)"),
@@ -85,7 +87,7 @@ def display_image(np_image):
     window['-IMAGE-'].draw_image(data=image_data, location=(0, height))
 
     # Stores markup locations, 1 if that pixel is marked up, 0 otherwise
-    markup_locations = np.zeros_like(base_image)
+    markup_locations = np.zeros_like(base_image)[:,:,0]
     
     # Base image + white pixel markup
     markedup_image = np.copy(base_image)
@@ -103,14 +105,17 @@ def display_image(np_image):
         elif event == "-IMAGE-+UP":
             markup_image(markedup_image, markup_locations, window)
         elif event == "Reset":
-            markup_locations = np.zeros_like(base_image)
+            markup_locations = np.zeros_like(base_image)[:,:,0]
             markedup_image = np.copy(base_image)
             reset_markup_image(markedup_image, window)
+        elif event == "Fill Enclosures":
+            markup_locations = ndimage.binary_fill_holes(markup_locations)
+            markup_image(markedup_image, markup_locations, window)
         elif event == "Remove Objects":
             # Use markup locations to remove objects in the image
-            markup_ys, markup_xs, _ = np.where(markup_locations == 1)
+            markup_ys, markup_xs = np.where(markup_locations == 1)
             markup_indexes = list(zip(markup_xs, markup_ys))
-            obj_removed_image = remove_objects(base_image, markup_indexes)
+            obj_removed_image = remove_objects(np.copy(base_image), markup_indexes)
 
             display_obj_removed_image(obj_removed_image)
         elif event == sg.WINDOW_CLOSED:
