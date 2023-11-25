@@ -31,18 +31,19 @@ def remove_objects(image, marked_locations, radius=1):
     # Make a copy of orignial image
     result_image = [row[:] for row in image]
 
-    for x, y in marked_locations:
-        # Get the pixel values at the marked location
-        pixel_value = image[y][x]
+    for i in range(8):
+        for x, y in marked_locations:
+            # Get the pixel values at the marked location
+            pixel_value = image[y][x]
 
-        for i in range(max(0, x - radius), min(len(image[0]), x + radius + 1)):
-            for j in range(max(0, y - radius), min(len(image), y + radius + 1)):
-                # Compare individual RGB components of the pixel values
-                for c in range(3): # 0 = Red, 1 = Green, 2 = Blue
-                    # If any RGB component of the pixel differs, replace the marked pixel
-                    if image[j][i][c] != pixel_value[c]:
-                        result_image[y][x] = image[j][i]
-                        break  # Break if a non-marked pixel is found
+            for i in range(max(0, x - radius), min(len(image[0]), x + radius + 1)):
+                for j in range(max(0, y - radius), min(len(image), y + radius + 1)):
+                    # Compare individual RGB components of the pixel values
+                    for c in range(3): # 0 = Red, 1 = Green, 2 = Blue
+                        # If any RGB component of the pixel differs, replace the marked pixel
+                        if image[j][i][c] != pixel_value[c]:
+                            result_image[y][x] = image[j][i]
+                            break  # Break if a non-marked pixel is found
     return result_image
 
 def display_image(np_image):
