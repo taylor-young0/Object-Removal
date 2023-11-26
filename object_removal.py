@@ -77,7 +77,7 @@ def display_image(np_image):
             sg.Button("Reset"),
             sg.Button("Fill Enclosures"),
             sg.Button("Remove Objects"),
-            sg.Text(size=(85, 0)),
+            sg.Text(size=(70, 0)),
             sg.Text("Markup width (px)"),
             sg.Slider((1, 21), resolution=2, default_value=5, orientation='horizontal', key="markup_width")
         ]
