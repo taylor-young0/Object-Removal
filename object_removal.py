@@ -8,16 +8,19 @@
 
 import argparse
 import PySimpleGUI as sg
-from PIL import Image
+from PIL import Image, ImageDraw
 from io import BytesIO
 from scipy import ndimage
 import numpy as np
 import cv2
+from skimage.draw import line_aa
 
 width = 0
 height = 0
 # Input image, never modified
 base_image = np.array([])
+# mouse drag continuity
+last_x, last_y = None, None
 
 def np_im_to_data(im):
     array = np.array(im, dtype=np.uint8)
@@ -95,19 +98,26 @@ def display_image(np_image):
     # Base image + objects removed
     obj_removed_image = np.copy(base_image)
 
+    drawn_lines = []  # Initialize drawn_lines 
+
     # Event loop
     while True:
         event, values = window.read()
 
+        print(f"Event: {event}")
+
         if event == "-IMAGE-":
             x, y = values[event]
             markup_width = values["markup_width"]
-            add_markup_locations(x, y, markup_width, existing_locations=markup_locations)
+            drawn_lines = add_markup_locations(x, y, markup_width, existing_locations=markup_locations, drawn_lines=drawn_lines)
         elif event == "-IMAGE-+UP":
+            drawn_lines = reset_drawn_lines(drawn_lines)  # Reset drawn lines when resetting
+            print(f"Reset: {drawn_lines}")  # Print drawn lines for debugging
             markup_image(markedup_image, markup_locations, window)
         elif event == "Reset":
             markup_locations = np.zeros_like(base_image)[:,:,0]
             markedup_image = np.copy(base_image)
+            drawn_lines = reset_drawn_lines(drawn_lines)  # Reset drawn lines when resetting
             reset_markup_image(markedup_image, window)
         elif event == "Fill Enclosures":
             markup_locations = ndimage.binary_fill_holes(markup_locations)
@@ -124,18 +134,47 @@ def display_image(np_image):
 
     window.close()
 
-def add_markup_locations(x, y, markup_width, existing_locations):
+def add_markup_locations(x, y, markup_width, existing_locations, drawn_lines):
+    global last_x, last_y
+
     # Update y because (0, 0) is bottom left of the image
     y = height - y
 
-    # width number of elements centred around 0
-    delta = np.arange(-(markup_width-1)//2, (markup_width-1)//2 + 1, dtype=np.int64)
-    dx, dy = np.meshgrid(delta, delta)
+    # Convert to PIL Image for drawing
+    image = Image.fromarray(base_image)
+    draw = ImageDraw.Draw(image)
 
-    surrounding_x = np.clip(x + dx, 0, width - 1)
-    surrounding_y = np.clip(y + dy, 0, height - 1)
+    # Interpolate points between last and current mouse positions using draw.line
+    if last_x is not None and last_y is not None:
+        line_coordinates = [(last_x, last_y), (x, y)]
+        draw.line(line_coordinates, fill=(255, 0, 0), width=int(markup_width))
+    else:
+        draw.point((x, y), fill=(255, 0, 0))
 
-    existing_locations[surrounding_y, surrounding_x] = 1
+    # Update existing_locations based on the drawn line
+    drawn_image = np.array(image)
+    drawn_line_mask = np.all(drawn_image == [255, 0, 0], axis=-1)  # Assuming red color for the drawn line
+    existing_locations[drawn_line_mask] = 1
+
+    # Store the drawn points for continuous connection
+    if last_x is not None and last_y is not None:
+        drawn_lines.append([(last_x, last_y), (x, y)])
+
+    # Connect the new points to the previously drawn points
+    for line in drawn_lines:
+        draw.line(line, fill=(255, 0, 0), width=int(markup_width))
+
+    # Save the last point for drag continuity
+    last_x, last_y = x, y
+
+    print(f"drawn_lines: {drawn_lines}")  # Print drawn lines for debugging
+
+    return drawn_lines  # Return updated drawn_lines
+    
+# Reset lines when the mouse is released
+def reset_drawn_lines(drawn_lines):
+    drawn_lines.clear()  # Clear the existing drawn lines
+    return drawn_lines  # Return cleared drawn lines
 
 def markup_image(np_image, markup_locations, window):
     np_image[markup_locations == 1] = 255
