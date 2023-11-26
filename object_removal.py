@@ -99,25 +99,25 @@ def display_image(np_image):
     obj_removed_image = np.copy(base_image)
 
     drawn_lines = []  # Initialize drawn_lines 
+    global last_x, last_y
 
     # Event loop
     while True:
         event, values = window.read()
-
-        print(f"Event: {event}")
 
         if event == "-IMAGE-":
             x, y = values[event]
             markup_width = values["markup_width"]
             drawn_lines = add_markup_locations(x, y, markup_width, existing_locations=markup_locations, drawn_lines=drawn_lines)
         elif event == "-IMAGE-+UP":
-            drawn_lines = reset_drawn_lines(drawn_lines)  # Reset drawn lines when resetting
-            print(f"Reset: {drawn_lines}")  # Print drawn lines for debugging
+            drawn_lines = []
+            last_x, last_y = None, None
             markup_image(markedup_image, markup_locations, window)
         elif event == "Reset":
             markup_locations = np.zeros_like(base_image)[:,:,0]
             markedup_image = np.copy(base_image)
-            drawn_lines = reset_drawn_lines(drawn_lines)  # Reset drawn lines when resetting
+            drawn_lines = []
+            last_x, last_y = None, None
             reset_markup_image(markedup_image, window)
         elif event == "Fill Enclosures":
             markup_locations = ndimage.binary_fill_holes(markup_locations)
@@ -148,33 +148,20 @@ def add_markup_locations(x, y, markup_width, existing_locations, drawn_lines):
     if last_x is not None and last_y is not None:
         line_coordinates = [(last_x, last_y), (x, y)]
         draw.line(line_coordinates, fill=(255, 0, 0), width=int(markup_width))
-    else:
-        draw.point((x, y), fill=(255, 0, 0))
 
-    # Update existing_locations based on the drawn line
-    drawn_image = np.array(image)
-    drawn_line_mask = np.all(drawn_image == [255, 0, 0], axis=-1)  # Assuming red color for the drawn line
-    existing_locations[drawn_line_mask] = 1
+        # Update existing_locations based on the drawn line
+        drawn_image = np.array(image)
+        drawn_line_mask = np.all(drawn_image == [255, 0, 0], axis=-1)  # Assuming red color for the drawn line
+        existing_locations[drawn_line_mask] = 1
 
-    # Store the drawn points for continuous connection
-    if last_x is not None and last_y is not None:
+        # Store the drawn points for continuous connection
         drawn_lines.append([(last_x, last_y), (x, y)])
-
-    # Connect the new points to the previously drawn points
-    for line in drawn_lines:
-        draw.line(line, fill=(255, 0, 0), width=int(markup_width))
 
     # Save the last point for drag continuity
     last_x, last_y = x, y
 
-    print(f"drawn_lines: {drawn_lines}")  # Print drawn lines for debugging
-
     return drawn_lines  # Return updated drawn_lines
-    
-# Reset lines when the mouse is released
-def reset_drawn_lines(drawn_lines):
-    drawn_lines.clear()  # Clear the existing drawn lines
-    return drawn_lines  # Return cleared drawn lines
+
 
 def markup_image(np_image, markup_locations, window):
     np_image[markup_locations == 1] = 255
