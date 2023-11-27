@@ -97,8 +97,7 @@ def display_image(np_image):
     markedup_image = np.copy(base_image)
     # Base image + objects removed
     obj_removed_image = np.copy(base_image)
-
-    drawn_lines = []  # Initialize drawn_lines 
+ 
     global last_x, last_y
 
     # Event loop
@@ -108,15 +107,13 @@ def display_image(np_image):
         if event == "-IMAGE-":
             x, y = values[event]
             markup_width = values["markup_width"]
-            drawn_lines = add_markup_locations(x, y, markup_width, existing_locations=markup_locations, drawn_lines=drawn_lines)
+            add_markup_locations(x, y, markup_width, existing_locations=markup_locations)
         elif event == "-IMAGE-+UP":
-            drawn_lines = []
             last_x, last_y = None, None
             markup_image(markedup_image, markup_locations, window)
         elif event == "Reset":
             markup_locations = np.zeros_like(base_image)[:,:,0]
             markedup_image = np.copy(base_image)
-            drawn_lines = []
             last_x, last_y = None, None
             reset_markup_image(markedup_image, window)
         elif event == "Fill Enclosures":
@@ -134,7 +131,7 @@ def display_image(np_image):
 
     window.close()
 
-def add_markup_locations(x, y, markup_width, existing_locations, drawn_lines):
+def add_markup_locations(x, y, markup_width, existing_locations):
     global last_x, last_y
 
     # Update y because (0, 0) is bottom left of the image
@@ -154,13 +151,8 @@ def add_markup_locations(x, y, markup_width, existing_locations, drawn_lines):
         drawn_line_mask = np.all(drawn_image == [255, 0, 0], axis=-1)  # Assuming red color for the drawn line
         existing_locations[drawn_line_mask] = 1
 
-        # Store the drawn points for continuous connection
-        drawn_lines.append([(last_x, last_y), (x, y)])
-
     # Save the last point for drag continuity
     last_x, last_y = x, y
-
-    return drawn_lines  # Return updated drawn_lines
 
 
 def markup_image(np_image, markup_locations, window):
