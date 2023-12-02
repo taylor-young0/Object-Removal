@@ -13,6 +13,7 @@ from io import BytesIO
 from scipy import ndimage
 import numpy as np
 import cv2
+from skimage.draw import line_aa
 
 width = 0
 height = 0
@@ -140,19 +141,25 @@ def add_markup_locations(x, y, markup_width, existing_locations):
     image = Image.fromarray(base_image)
     draw = ImageDraw.Draw(image)
 
-    # Interpolate points between last and current mouse positions using draw.line
-    if last_x is not None and last_y is not None:
-        line_coordinates = [(last_x, last_y), (x, y)]
-        draw.line(line_coordinates, fill=(255, 0, 0), width=int(markup_width))
+    # Ensure markup_width is an integer
+    markup_width = int(markup_width)
 
-        # Update existing_locations based on the drawn line
-        drawn_image = np.array(image)
-        drawn_line_mask = np.all(drawn_image == [255, 0, 0], axis=-1)  # Assuming red color for the drawn line
-        existing_locations[drawn_line_mask] = 1
+    # Interpolate points between last and current mouse positions using Bresenham's line algorithm
+    if last_x is not None and last_y is not None:
+        points = list(zip(*line_aa(last_x, last_y, x, y)))
+
+        for point in points:
+            px, py = int(round(point[0])), int(round(point[1]))
+
+            # Draw a series of points along the curve
+            for i in range(-markup_width // 2, markup_width // 2 + 1):
+                draw.ellipse([(px + i, py + i), (px + i + 1, py + i + 1)], fill=(255, 0, 0))
+
+                # Update existing_locations based on the drawn points
+                existing_locations[py + i, px + i] = 1
 
     # Save the last point for drag continuity
     last_x, last_y = x, y
-
 
 def markup_image(np_image, markup_locations, window):
     np_image[markup_locations == 1] = 255
