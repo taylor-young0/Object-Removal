@@ -13,7 +13,6 @@ from io import BytesIO
 from scipy import ndimage
 import numpy as np
 import cv2
-from skimage.draw import line_aa
 
 width = 0
 height = 0
