@@ -29,24 +29,32 @@ def np_im_to_data(im):
         data = output.getvalue()
     return data
 
-def remove_objects(image, marked_locations, radius=1):
-    # Make a copy of original image
-    result_image = [row[:] for row in image]
+def remove_objects(image, marked_locations, removal_radius=1):
+    # Make a copy of the original image
+    modified_image = [row[:] for row in image]
 
-    for i in range(8):
-        for x, y in marked_locations:
-            # Get the pixel values at the marked location
-            pixel_value = image[y][x]
+    # Loop through each marked location
+    for marked_x, marked_y in marked_locations:
+        # Get the color of the marked pixel
+        marked_pixel_color = image[marked_y][marked_x]
 
-            for i in range(max(0, x - radius), min(len(image[0]), x + radius + 1)):
-                for j in range(max(0, y - radius), min(len(image), y + radius + 1)):
-                    # Compare individual RGB components of the pixel values
-                    for c in range(3): # 0 = Red, 1 = Green, 2 = Blue
-                        # If any RGB component of the pixel differs, replace the marked pixel
-                        if image[j][i][c] != pixel_value[c]:
-                            result_image[y][x] = image[j][i]
-                            break  # Break if a non-marked pixel is found
-    return result_image
+        # Range of x values within the specified radius
+        x_range = range(max(0, marked_x - removal_radius), min(len(image[0]), marked_x + removal_radius + 1))
+
+        # Range of y values within the specified radius
+        y_range = range(max(0, marked_y - removal_radius), min(len(image), marked_y + removal_radius + 1))
+
+        # Check nearby pixels within the specified radius
+        for current_x in x_range:
+            for current_y in y_range:
+                # Compare color channels of the marked pixel with nearby pixel
+                for color_channel in range(3):  # 0 = Red, 1 = Green, 2 = Blue
+                    # When any of the color channel differs, replace the marked pixel
+                    if image[current_y][current_x][color_channel] != marked_pixel_color[color_channel]:
+                        modified_image[marked_y][marked_x] = image[current_y][current_x]
+                        break  # If a non-marked pixel is found
+
+    return modified_image
 
 def display_image(np_image):
     # Convert numpy array to data that sg.Graph can understand
@@ -150,7 +158,7 @@ def add_markup_locations(x, y, markup_width, existing_locations):
 
         # Update existing_locations based on the drawn line
         drawn_image = np.array(image)
-        drawn_line_mask = np.all(drawn_image == [255, 0, 0], axis=-1)  # Assuming red color for the drawn line
+        drawn_line_mask = np.all(drawn_image == [255, 0, 0], axis=-1)
         existing_locations[drawn_line_mask] = 1
 
     # Save the last point for drag continuity
