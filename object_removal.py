@@ -87,7 +87,6 @@ def display_image(np_image):
             sg.Button("Reset"),
             sg.Button("Fill Enclosures"),
             sg.Button("Remove Objects"),
-            sg.Button("Save As"),  
             sg.Text(size=(70, 0)),
             sg.Text("Markup width (px)"),
             sg.Slider((1, 21), resolution=2, default_value=5, orientation='horizontal', key="markup_width")
@@ -132,10 +131,7 @@ def display_image(np_image):
             markup_ys, markup_xs = np.where(markup_locations == 1)
             markup_indexes = list(zip(markup_xs, markup_ys))
             obj_removed_image = remove_objects(np.copy(base_image), markup_indexes)
-
             display_obj_removed_image(obj_removed_image)
-        elif event == "Save As":  
-            save_image(obj_removed_image)
         elif event == sg.WINDOW_CLOSED:
             break
 
@@ -176,11 +172,16 @@ def reset_markup_image(markedup_image, window):
     window['-IMAGE-'].draw_image(data=image_data, location=(0, height))
 
 def save_image(np_image):
-    file_types = [("PNG Files", "*.png"), ("All Files", "*.*")]
-    file_path = sg.popup_get_file("Save As", file_types=file_types, save_as=True)
-    if file_path:
-        im = Image.fromarray(np_image)
-        im.save(file_path)
+    filename = sg.popup_get_file('Save Image', default_extension=".png", save_as=True, file_types=(("PNG Files", "*.png"), ("All Files", "*.*")))
+
+    if filename:
+        # Convert numpy array to data that sg.Graph can understand
+        image_data = np_im_to_data(np_image)
+
+        # Save the image to the specified file
+        with open(filename, 'wb') as f:
+            f.write(image_data)
+
 
 def display_obj_removed_image(np_image):
     # Convert numpy array to data that sg.Graph can understand
@@ -225,6 +226,8 @@ def display_obj_removed_image(np_image):
 
         if event == sg.WINDOW_CLOSED or event == "Close":
             break
+        elif event == "Save":
+            save_image(np_image)
 
     window.close()
 
