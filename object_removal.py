@@ -29,30 +29,31 @@ def np_im_to_data(im):
         data = output.getvalue()
     return data
 
-def remove_objects(image, marked_locations, removal_radius=1):
+def remove_objects(image, marked_locations):
     # Make a copy of the original image
     modified_image = [row[:] for row in image]
 
-    # Loop through each marked location
-    for marked_x, marked_y in marked_locations:
-        # Get the color of the marked pixel
-        marked_pixel_color = image[marked_y][marked_x]
+    for i in range(8):
+        # Loop through each marked location
+        for marked_x, marked_y in marked_locations:
+            # Get the color of the marked pixel
+            marked_pixel_color = image[marked_y][marked_x]
 
-        # Range of x values within the specified radius
-        x_range = range(max(0, marked_x - removal_radius), min(len(image[0]), marked_x + removal_radius + 1))
+            # Range of x values within a radius of 1
+            x_range = range(max(0, marked_x - 1), min(len(image[0]), marked_x + 2))
 
-        # Range of y values within the specified radius
-        y_range = range(max(0, marked_y - removal_radius), min(len(image), marked_y + removal_radius + 1))
+            # Range of y values within a radius of 1
+            y_range = range(max(0, marked_y - 1), min(len(image), marked_y + 2))
 
-        # Check nearby pixels within the specified radius
-        for current_x in x_range:
-            for current_y in y_range:
-                # Compare color channels of the marked pixel with nearby pixel
-                for color_channel in range(3):  # 0 = Red, 1 = Green, 2 = Blue
-                    # When any of the color channel differs, replace the marked pixel
-                    if image[current_y][current_x][color_channel] != marked_pixel_color[color_channel]:
-                        modified_image[marked_y][marked_x] = image[current_y][current_x]
-                        break  # If a non-marked pixel is found
+            # Check nearby pixels within the specified radius
+            for current_x in x_range:
+                for current_y in y_range:
+                    # Compare color channels of the marked pixel with nearby pixel
+                    for color_channel in range(3):  # 0 = Red, 1 = Green, 2 = Blue
+                        # When any of the color channel differs, replace the marked pixel
+                        if image[current_y][current_x][color_channel] != marked_pixel_color[color_channel]:
+                            modified_image[marked_y][marked_x] = image[current_y][current_x]
+                            break  # If a non-marked pixel is found
 
     return modified_image
 
